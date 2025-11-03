@@ -10,6 +10,16 @@ import useScrollLock from '../hooks/useScrollLock';
 import '../styles/common.css';
 import { summarizeReservationPricing, buildReservationDraftFromForm, N } from '../utils/pricing';
 
+const EURO_FORMATTER = new Intl.NumberFormat('it-IT', {
+  style: 'currency',
+  currency: 'EUR',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const formatEuro = (value) => EURO_FORMATTER.format(N(value));
+const round2 = (value) => Math.round(N(value) * 100) / 100;
+
 // Tipi di camere e capacità
 const ROOM_TYPES = {
   1: 'Quadrupla',
