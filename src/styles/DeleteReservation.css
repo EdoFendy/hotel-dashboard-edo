@@ -1,0 +1,36 @@
+/* src/styles/DeleteReservation.css */
+
+.delete-reservation {
+  max-width: 600px;
+  margin: 100px auto;
+  padding: 30px;
+  text-align: center;
+  background-color: #ffe6e6;
+  border: 1px solid #ffcccc;
+  border-radius: 8px;
+}
+
+.delete-reservation h2 {
+  color: #c0392b;
+  margin-bottom: 20px;
+}
+
+.delete-reservation p {
+  font-size: 18px;
+}
+
+/* Media query per dispositivi mobili */
+@media (max-width: 768px) {
+  .delete-reservation {
+    margin: 50px 10px;
+    padding: 20px;
+  }
+
+  .delete-reservation h2 {
+    font-size: 1.5em;
+  }
+
+  .delete-reservation p {
+    font-size: 1em;
+  }
+}

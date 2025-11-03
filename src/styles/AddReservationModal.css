@@ -1,0 +1,44 @@
+/* src/components/AddReservationModal.css */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .modal-content {
+    background-color: #ffffff;
+    padding: 20px;
+    width: 400px;
+    border-radius: 8px;
+  }
+  
+  .modal-content h2 {
+    margin-top: 0;
+  }
+  
+  .modal-content form {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .modal-content label {
+    margin-top: 10px;
+  }
+  
+  .modal-content input,
+  .modal-content select {
+    padding: 8px;
+    margin-top: 5px;
+  }
+  
+  .modal-content button {
+    margin-top: 15px;
+    padding: 10px;
+  }
+  

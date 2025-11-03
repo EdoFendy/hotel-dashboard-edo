@@ -1,0 +1,122 @@
+/* src/styles/Layout.css */
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 340px) 1fr;
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+  width: 100%;
+  background: linear-gradient(160deg, #fdfcfb 0%, #f9f8f5 40%, #faf9f7 100%);
+  color: #5a5a5a;
+}
+
+.layout > .sidebar {
+  grid-row: 1 / span 2;
+  grid-column: 1;
+  align-self: stretch;
+}
+
+.layout > .header {
+  grid-column: 2;
+  grid-row: 1;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.layout__body {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(8px);
+  grid-column: 2;
+  grid-row: 2;
+  min-height: 0;
+}
+
+.layout__content {
+  padding: clamp(1.5rem, 2vw, 2.5rem);
+  background: transparent;
+  overflow-x: visible;
+}
+
+.layout__backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(4px);
+  z-index: 15; /* Sotto header (50) ma sopra contenuto */
+}
+
+@media (max-width: 1200px) {
+  .layout {
+    grid-template-columns: minmax(260px, 280px) 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .layout > .sidebar {
+    position: fixed;
+    inset: 0 35% 0 0;
+    z-index: 20;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .layout > .sidebar.sidebar--open {
+    transform: translateX(0);
+  }
+  
+  .layout > .header {
+    grid-column: 1;
+    grid-row: 1;
+    position: fixed;
+    width: 100%;
+    z-index: 50;
+  }
+
+  .layout__body {
+    grid-column: 1;
+    grid-row: 2;
+    padding-top: 0;
+  }
+  
+  .layout__content {
+    padding: clamp(1.5rem, 2vw, 2.5rem);
+    padding-top: calc(85px + clamp(1.5rem, 2vw, 2.5rem)); /* Header height (85px) + content padding */
+  }
+
+  .layout__backdrop {
+    display: none;
+  }
+
+  .layout__backdrop.layout__backdrop--open {
+    display: block;
+  }
+}
+
+@media (max-width: 768px) {
+  .layout__content {
+    padding: clamp(1rem, 6vw, 1.75rem);
+    padding-top: calc(75px + clamp(1rem, 6vw, 1.75rem)); /* Header mobile compensato */
+  }
+}
+
+@media (max-width: 600px) {
+  .layout__content {
+    padding: 1rem;
+    padding-top: calc(70px + 1rem); /* Header mobile più compatto */
+  }
+}
+
+.layout--sidebar-open {
+  overflow: hidden;
+}
+
+.layout--sidebar-open .layout__backdrop {
+  display: block;
+}

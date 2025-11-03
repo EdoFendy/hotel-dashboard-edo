@@ -1,0 +1,499 @@
+/* Reset and Global Styles */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* =========================
+   DESKTOP / BASE (unchanged)
+   ========================= */
+
+.calendarPageContainer {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0.5rem;
+}
+
+/* Compensazione per header fixed su mobile/tablet - gestito da Layout.css */
+.calendarPage {
+  /* Se servono stili aggiuntivi, aggiungili qui */
+}
+
+.calendarShell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 60px);
+  width: 100%;
+  overflow: hidden;
+  min-width: 0; /* Critical for proper overflow containment */
+}
+
+.calendarLegendBar {
+  width: 100%;
+  padding: 0.75rem clamp(1rem, 3vw, 1.5rem);
+  background: #fff;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-shrink: 0;
+  overflow: hidden; /* Contain children */
+}
+
+.calendarScrollArea {
+  flex: 1;
+  overflow: hidden; /* Hide nested overflow */
+  padding: 0 clamp(1.5rem, 2vw, 2.5rem);
+  background: #f8fafc;
+}
+
+.calendarControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(0.75rem, 2vw, 1.25rem);
+  flex-wrap: wrap;
+}
+
+.monthNav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.5rem, 2vw, 1rem);
+  flex-wrap: wrap;
+}
+
+/* Header Section */
+.calendarTitle {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 0.5rem;
+}
+
+/* Navigation and Buttons */
+.currentMonth {
+  font-size: clamp(1rem, 2.4vw, 1.2rem);
+  font-weight: 600;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.65rem;
+  background: rgba(241, 245, 249, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.7);
+}
+
+.navButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.55rem 0.9rem;
+  background: linear-gradient(135deg, #1c2e52 0%, #22345a 100%);
+  color: #ffffff;
+  border-radius: 0.6rem;
+  font-size: 0.8rem;
+  border: none;
+  cursor: pointer;
+  min-width: 110px;
+  white-space: nowrap;
+  box-shadow: 0 6px 14px -12px rgba(21, 41, 79, 0.45);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.navButton:active {
+  transform: translateY(1px);
+  box-shadow: 0 6px 12px -12px rgba(21, 41, 79, 0.6);
+}
+
+.prenotaBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.6rem 1rem;
+  background: linear-gradient(135deg, #214078 0%, #263f6e 100%);
+  color: #ffffff;
+  border-radius: 0.7rem;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 10px 22px -18px rgba(21, 41, 79, 0.6);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.prenotaBtn:hover {
+  box-shadow: 0 16px 28px -18px rgba(21, 41, 79, 0.65);
+}
+
+.prenotaBtnActive {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  box-shadow: 0 18px 30px -18px rgba(220, 38, 38, 0.55);
+}
+
+/* Legend */
+.legend {
+  background-color: white;
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.legend h4 {
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.legend ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  font-size: 0.7rem;
+}
+
+.legendColor {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  margin-right: 4px;
+}
+
+.groupColor { background-color: #ADD8E6; }
+
+/* Table Container */
+.tableContainer {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  background: white;
+  border-radius: 0.25rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.roomTableContainer { margin-bottom: 1rem; }
+
+/* Table Styles - Super Compact */
+.listTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed !important; /* necessario per layout desktop */
+}
+
+.listTable th,
+.listTable td {
+  height: 35px !important;
+  max-height: 25px !important;
+  min-height: 15px !important;
+  line-height: 15px !important;
+  padding: 0 2px !important;
+  font-size: 0.65rem !important;
+  border: 1px solid #e2e8f0;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  box-sizing: border-box !important;
+}
+
+.listTable th {
+  background-color: #f8fafc;
+  font-weight: 500;
+  color: #475569;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.listTable th:first-child,
+.listTable td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 6;
+  background: #ffffff;
+  font-weight: 600;
+  box-shadow: 2px 0 0 rgba(226, 232, 240, 0.8);
+}
+
+/* Cell Styles */
+.listCell {
+  cursor: pointer;
+  height: 15px !important;
+  line-height: 15px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.listCell.occupied { color: white; }
+
+.statusDot {
+  display: inline-block;
+  width: 4px !important;
+  height: 4px !important;
+  border-radius: 50%;
+  margin: 0 1px !important;
+  padding: 0 !important;
+  vertical-align: middle;
+}
+
+/* Modal Overlay */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 200;
+  overflow-y: auto;
+}
+
+/* Modal Container */
+.modal {
+  background-color: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.modalTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.modalCloseBtn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #64748b;
+  transition: color 0.2s ease;
+}
+.modalCloseBtn:hover { color: #475569; }
+
+.modalActions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: #334155;
+}
+
+.modalTable {
+  width: 100%;
+  margin-bottom: 1.5rem;
+  border-collapse: collapse;
+}
+.modalTable td { padding: 0.75rem; border: 1px solid #e2e8f0; }
+
+.extrasSection { margin-top: 1rem; }
+.roomExtras {
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background-color: #f9fafb;
+  border-radius: 0.25rem;
+}
+.singleExtras { margin-top: 1rem; }
+
+.modalButtons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+  justify-content: center;
+}
+
+/* Button generico */
+.btn {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.5rem;
+  color: #ffffff;
+}
+
+.editBtn { background-color: #0ea5e9; }
+.editBtn:hover { background-color: #0284c7; }
+.deleteBtn { background-color: #ef4444; }
+.deleteBtn:hover { background-color: #dc2626; }
+.checkoutBtn { background-color: #8b5cf6; }
+.checkoutBtn:hover { background-color: #7c3aed; }
+
+.available {}
+.selected { outline: 2px solid #15294F; }
+
+/* =========================
+   TABLET (iPad) – max 1024px
+   ========================= */
+@media (max-width: 1024px) {
+  .calendarScrollArea {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .calendarControls {
+    gap: .75rem;
+  }
+  .monthNav {
+    gap: .75rem;
+  }
+  .navButton,
+  .prenotaBtn {
+    font-size: 0.9rem;
+  }
+
+  /* scorrimento: orizzontale per giorni, verticale per camere */
+  .tableContainer {
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    max-width: 100%;
+  }
+
+  /* Niente ellissi, testo su una riga; larghezza cresce, non altezza */
+  .listTable th, .listTable td {
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    height: 36px !important;
+    line-height: 36px !important;
+    padding: 0 .5rem !important;
+    font-size: .8rem !important;
+  }
+
+  /* Larghezza colonne: la tabella può allargarsi in base al contenuto */
+  .listTable {
+    table-layout: auto !important;
+    min-width: 1600px; /* base per 31 giorni; si espande se serve */
+  }
+
+  /* Giorni con larghezza minima più comoda alla lettura */
+  .listTable th:not(:first-child),
+  .listTable td:not(:first-child) {
+    min-width: 80px;
+  }
+
+  /* Colonna "Stanza" più larga per non spezzare */
+  .listTable th:first-child,
+  .listTable td:first-child {
+    min-width: 72px;
+  }
+
+  /* sticky: prima colonna e header */
+  .listTable th:first-child,
+  .listTable td:first-child {
+    position: sticky;
+    left: 0;
+    background-color: #fff;
+    z-index: 3;
+    box-shadow: 2px 0 0 #e2e8f0;
+    font-weight: 600;
+  }
+  .listTable th { position: sticky; top: 0; z-index: 4; }
+
+  /* Celle con altezza costante: niente crescita verticale */
+  .listCell {
+    height: 36px !important;
+    line-height: 36px !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    padding: 0 .25rem !important;
+  }
+
+  /* garantisci ampiezza tabella */
+  .listTable {
+    min-width: 1600px; /* 31 giorni * ~50px + colonna camere */
+  }
+
+  /* legenda scorrevole se piena */
+  .legend ul {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 768px) {
+  .calendarShell {
+    height: calc(100vh - 60px);
+  }
+  
+  .calendarLegendBar {
+    padding: 0.75rem 1rem;
+  }
+  
+  .calendarScrollArea {
+    padding: 0 1rem 1rem;
+    overflow-y: auto; /* vedi tutte le camere */
+    overflow-x: hidden;
+  }
+  
+  .tableContainer {
+    width: 100vw;
+    margin-left: calc(-1 * clamp(1rem, 3vw, 1.5rem));
+    border-radius: 0;
+    overflow-y: auto; /* abilita scroll verticale locale */
+  }
+
+  /* Mobile: colonne un filo più larghe per evitare spezzamenti */
+  .listTable th:not(:first-child),
+  .listTable td:not(:first-child) {
+    min-width: 90px;
+  }
+
+  .listTable {
+    table-layout: auto !important;
+    min-width: 2000px; /* mobile: più largo, scroll orizzontale deciso */
+  }
+}
+
+/* Print Styles */
+@media print {
+  .navButton,
+  .prenotaBtn,
+  .btn { display: none; }
+
+  .listTable th,
+  .listTable td { border: 1px solid #000; }
+}

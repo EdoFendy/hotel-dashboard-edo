@@ -1,0 +1,306 @@
+/* src/styles/Sidebar.css */
+
+/* Stile generale della sidebar */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: clamp(1.5rem, 2vw, 2.5rem);
+  background: #15294F;
+  color: #e2e8f0;
+  height: 100vh;
+  min-height: 100%;
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 2px 0 20px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sidebar__badge {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.15));
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #60a5fa;
+  border: 2px solid rgba(96, 165, 250, 0.3);
+}
+
+.sidebar__eyebrow {
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  color: rgba(226, 232, 240, 0.5);
+}
+
+.sidebar__title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+  color: #f8fafc;
+}
+
+.sidebar__nav {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.sidebar__nav a {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.85rem;
+  color: inherit;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.sidebar__nav a .sidebar__icon {
+  font-size: 1.2rem;
+}
+
+.sidebar__nav a:hover,
+.sidebar__nav a:focus {
+  background: rgba(59, 130, 246, 0.15);
+  transform: translateX(4px);
+}
+
+.sidebar__nav a.active {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(37, 99, 235, 0.15) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+}
+
+.sidebar__panel {
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 1.25rem;
+  padding: 1.2rem 1.4rem;
+  display: grid;
+  gap: 1.2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar__panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.sidebar__panel h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.sidebar__chip {
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.sidebar__stats {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+}
+
+.sidebar__stats li {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border-radius: 0.85rem;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.sidebar__stats span {
+  font-size: 0.75rem;
+  color: rgba(226, 232, 240, 0.6);
+}
+
+.sidebar__stats strong {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.sidebar__available {
+  color: #4ade80;
+}
+
+.sidebar__legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.5rem 1rem;
+  font-size: 0.8rem;
+  color: rgba(226, 232, 240, 0.6);
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 999px;
+  margin-right: 0.35rem;
+}
+
+.sidebar__rooms {
+  list-style: none;
+  display: grid;
+  gap: 0.75rem;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar__rooms li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.9rem;
+  border-radius: 1rem;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  transition: transform 0.2s ease, background 0.3s ease;
+}
+
+.sidebar__rooms li.is-available {
+  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.sidebar__rooms li.is-occupied {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.sidebar__rooms li:hover {
+  transform: translateX(4px);
+}
+
+.sidebar__room-name {
+  margin: 0;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.sidebar__room-type {
+  margin: 0;
+  font-size: 0.75rem;
+  color: rgba(226, 232, 240, 0.5);
+}
+
+.sidebar__room-status {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.sidebar__rooms .is-available .sidebar__room-status {
+  color: #4ade80;
+}
+
+.sidebar__rooms .is-occupied .sidebar__room-status {
+  color: #f87171;
+}
+
+.status-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.6), rgba(100, 116, 139, 0.4));
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.3);
+}
+
+.sidebar__footer {
+  margin-top: auto;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
+  display: grid;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.5);
+}
+
+.sidebar__support-btn {
+  justify-self: stretch;
+  padding: 0.75rem 1rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.15) 100%);
+  color: #93c5fd;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.sidebar__support-btn:hover,
+.sidebar__support-btn:focus {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(37, 99, 235, 0.25) 100%);
+}
+
+@media (max-width: 1024px) {
+  .sidebar {
+    position: fixed;
+    inset: 0 35% 0 0;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 20;
+    min-height: 100%;
+  }
+
+  .sidebar.sidebar--open {
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .sidebar {
+    inset: 0 18% 0 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    inset: 0;
+    width: min(320px, 100%);
+  }
+
+  .sidebar__stats {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar__rooms {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar__legend {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sidebar__support-btn {
+    font-size: 0.9rem;
+  }
+}

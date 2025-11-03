@@ -1,0 +1,189 @@
+/* src/components/Header.css */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem clamp(1rem, 2vw, 2.5rem);
+  background: rgba(255, 255, 255, 0.98);
+  color: #5a5a5a;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.04);
+  border-bottom: 1px solid rgba(200, 200, 200, 0.2);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Nascondi header quando si scrolla giù */
+.header--hidden {
+  transform: translateY(-100%);
+}
+
+/* Mostra header quando si scrolla su */
+.header--visible {
+  transform: translateY(0);
+}
+
+.header__left {
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 2vw, 1.75rem);
+}
+
+.header__menu-btn {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 2.5rem;
+  height: 1.75rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.header__menu-btn span {
+  display: block;
+  height: 3px;
+  width: 100%;
+  border-radius: 999px;
+  background-color: currentColor;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.header__titles {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.header__eyebrow {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: rgba(130, 130, 130, 0.7);
+}
+
+.header__page-title {
+  font-size: clamp(1.35rem, 3vw, 2rem);
+  margin: 0;
+  font-weight: 600;
+}
+
+.header__right {
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 3vw, 2rem);
+}
+
+.header__user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(240, 240, 240, 0.5);
+  border: 1px solid rgba(200, 200, 200, 0.3);
+}
+
+.header__avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(139, 180, 197, 0.3), rgba(184, 212, 221, 0.3));
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #6b9fb8;
+  border: 1px solid rgba(139, 180, 197, 0.3);
+}
+
+.header__user-info {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.header__user-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.header__user-role {
+  font-size: 0.75rem;
+  color: rgba(130, 130, 130, 0.7);
+}
+
+.header__logout {
+  padding: 0.6rem 1.25rem;
+  border-radius: 999px;
+  border: 1px solid rgba(200, 200, 200, 0.4);
+  background: rgba(240, 240, 240, 0.5);
+  color: #6a6a6a;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.header__logout:hover,
+.header__logout:focus {
+  transform: translateY(-1px);
+  background: rgba(240, 240, 240, 0.8);
+  border-color: rgba(180, 180, 180, 0.5);
+}
+
+.header__logout:active {
+  transform: translateY(0);
+}
+
+@media (min-width: 1025px) {
+  .header__menu-btn {
+    display: none;
+  }
+  
+  /* Su desktop disabilita hide/show scroll behavior */
+  .header,
+  .header--visible,
+  .header--hidden {
+    transform: none !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  .header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 50; /* Assicura che sia sopra tutto */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .header__right {
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .header {
+    padding: 1rem clamp(0.75rem, 4vw, 1.5rem);
+    /* Fix per iOS Safari */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+
+  .header__user {
+    display: none;
+  }
+
+  .header__logout {
+    padding: 0.5rem 0.9rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Fix per garantire smooth rendering su tutti i dispositivi */
+@supports (position: -webkit-sticky) or (position: sticky) {
+  .header {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+}

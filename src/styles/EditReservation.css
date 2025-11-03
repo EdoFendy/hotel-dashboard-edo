@@ -1,0 +1,324 @@
+/* src/styles/EditReservation.css */
+
+/* Variabili per la palette di colori */
+:root {
+  --primary-color: #27ae60;
+  --primary-dark: #1e8449;
+  --secondary-color: #4caf50;
+  --secondary-dark: #45a049;
+  --background-color: #f9f9f9;
+  --white: #ffffff;
+  --text-color: #333333;
+  --error-color: #e74c3c;
+  --border-color: #ccc;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Stile generale del contenitore della prenotazione */
+.edit-reservation {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 30px;
+  background-color: var(--white);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px var(--shadow-color);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Titolo della pagina */
+.edit-reservation h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: var(--primary-color);
+  font-size: 28px;
+}
+
+/* Errore */
+.edit-reservation .error {
+  color: var(--error-color);
+  margin-bottom: 20px;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Stile del form */
+.edit-reservation form {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Gruppo di input */
+.form-group {
+  margin-bottom: 20px;
+}
+
+/* Etichette */
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+/* Input e select */
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  font-size: 16px;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+/* Selettore singola/multipla */
+.radio-group {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 20px;
+}
+
+.radio-group label {
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+/* Sezione Extra */
+.extras {
+  border: 1px solid var(--border-color);
+  padding: 20px;
+  border-radius: 5px;
+  background-color: #f1f1f1;
+  margin-bottom: 20px;
+}
+
+.extras h3 {
+  margin-bottom: 15px;
+  color: var(--primary-color);
+  font-size: 20px;
+}
+
+/* Checkbox personalizzati */
+.checkbox-pet,
+.payment-checkbox {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.checkbox-pet input,
+.payment-checkbox input {
+  margin-right: 10px;
+  width: 20px;
+  height: 20px;
+}
+
+/* Selezione camere */
+.room-selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.room-option {
+  flex: 1 1 45%;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.room-option input[type="checkbox"] {
+  margin-right: 10px;
+  width: 18px;
+  height: 18px;
+}
+
+.room-option label {
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+}
+
+/* Stile per i link delle prenotazioni esistenti */
+.edit-reservation-link {
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.edit-reservation-link:hover {
+  color: #0056b3;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.status-dot.green {
+  background-color: #2ecc71;
+}
+
+.status-dot.red {
+  background-color: #e74c3c;
+}
+
+.custom-room-name,
+.room-price {
+  margin-top: 10px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.custom-room-name {
+  margin-left: 0;
+}
+
+.room-price {
+  margin-left: 0;
+}
+
+/* Numero totale di persone */
+#totalPeople {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  font-size: 16px;
+}
+
+/* Prezzo cumulativo */
+.cumulative-price-group {
+  margin-bottom: 20px;
+}
+
+.cumulative-price-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cumulative-price {
+  flex: 1;
+  padding: 12px 15px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  font-size: 16px;
+}
+
+.cumulative-price-container .calculate-btn.small {
+  padding: 10px 15px;
+  font-size: 14px;
+  background-color: var(--secondary-color);
+  color: var(--white);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.cumulative-price-container .calculate-btn.small:hover {
+  background-color: var(--secondary-dark);
+}
+
+/* Prezzo totale e pulsanti */
+.button-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.calculate-btn,
+.submit-btn {
+  flex: 1;
+  padding: 12px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-right: 10px;
+}
+
+.calculate-btn {
+  background-color: var(--secondary-color);
+  color: var(--white);
+}
+
+.calculate-btn:hover {
+  background-color: var(--secondary-dark);
+}
+
+.submit-btn {
+  background-color: var(--primary-color);
+  color: var(--white);
+}
+
+.submit-btn:hover {
+  background-color: var(--primary-dark);
+}
+
+/* Pulsante ultimo senza margine */
+.submit-btn:last-child {
+  margin-right: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .edit-reservation {
+    margin: 10px;
+    padding: 20px;
+  }
+
+  .room-option {
+    flex: 1 1 100%;
+  }
+
+  .button-group {
+    flex-direction: column;
+  }
+
+  .calculate-btn,
+  .submit-btn {
+    margin-right: 0;
+    margin-bottom: 10px;
+    width: 100%;
+  }
+
+  .submit-btn {
+    margin-bottom: 0;
+  }
+
+  .custom-room-name,
+  .room-price {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  /* Adjust calculate button position for cumulative price */
+  .cumulative-price-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cumulative-price-container .calculate-btn.small {
+    width: 100%;
+    margin-top: 10px;
+  }
+}

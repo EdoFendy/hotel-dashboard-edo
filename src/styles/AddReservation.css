@@ -1,0 +1,425 @@
+/* src/styles/AddReservation.css */
+
+/* Color Palette Variables */
+:root {
+  --primary-color: #27ae60; /* Green */
+  --primary-dark: #1e8449;
+  --secondary-color: #2980b9; /* Blue */
+  --secondary-dark: #1c5980;
+  --accent-color: #f39c12; /* Orange */
+  --accent-dark: #d35400;
+  --background-color: #f9f9f9;
+  --white: #ffffff;
+  --text-color: #333333;
+  --error-color: #e74c3c;
+  --border-color: #ccc;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --section-bg: #ecf0f1; /* Light Grey for Sections */
+}
+
+/* General Reservation Container Style */
+.add-reservation {
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 30px;
+  background-color: var(--white);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px var(--shadow-color);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Page Title */
+.add-reservation h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: var(--primary-color);
+  font-size: 32px;
+}
+
+/* Error Message */
+.add-reservation .error {
+  color: var(--error-color);
+  margin-bottom: 20px;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Form Styling */
+.add-reservation form {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+/* Input Group */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Labels */
+.form-group label {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+/* Inputs, Selects, and Textareas */
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  font-size: 16px;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+/* Single/Multiple Selector */
+.radio-group {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+}
+
+.radio-group label {
+  font-weight: 500;
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.radio-group input {
+  transform: scale(1.2);
+}
+
+/* Sections: Extras, Room Details, and Room Extras */
+.extras,
+.room-details,
+.room-extras {
+  border: 1px solid var(--border-color);
+  padding: 20px;
+  border-radius: 8px;
+  background-color: var(--section-bg);
+}
+
+.extras h3,
+.room-extras h4 {
+  margin-bottom: 15px;
+  color: var(--secondary-color);
+  font-size: 20px;
+  border-bottom: 2px solid var(--secondary-color);
+  padding-bottom: 5px;
+}
+
+/* Custom Checkboxes */
+.checkbox-pet,
+.payment-checkbox,
+.checkbox-guests-arrived,
+.checkbox-crib,
+.checkbox-crib-single {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.checkbox-pet input,
+.payment-checkbox input,
+.checkbox-guests-arrived input,
+.checkbox-crib input,
+.checkbox-crib-single input {
+  width: 20px;
+  height: 20px;
+}
+
+/* Available Rooms Selection */
+.room-selection {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+}
+
+.room-option {
+  display: flex;
+  align-items: center;
+  background-color: var(--section-bg);
+  padding: 10px;
+  border-radius: 5px;
+  transition: background-color 0.3s;
+}
+
+.room-option:hover {
+  background-color: #dfe6e9;
+}
+
+.room-option input[type="checkbox"] {
+  margin-right: 10px;
+  width: 18px;
+  height: 18px;
+}
+
+.room-option label {
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.status-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.status-dot.green {
+  background-color: #2ecc71;
+}
+
+.status-dot.red {
+  background-color: #e74c3c;
+}
+
+.status-dot.orange {
+  background-color: #f1c40f;
+}
+
+.status-dot.blue {
+  background-color: #3498db;
+}
+
+/* Existing Reservation Link */
+.edit-reservation-link {
+  color: var(--secondary-color);
+  text-decoration: underline;
+  cursor: pointer;
+  margin-left: 5px;
+}
+
+.edit-reservation-link:hover {
+  color: var(--secondary-dark);
+}
+
+/* Combined Room Details and Extras */
+.room-extras {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.room-extra {
+  border: 1px solid var(--border-color);
+  padding: 15px;
+  border-radius: 5px;
+  background-color: var(--white);
+}
+
+.room-extra h4 {
+  margin-bottom: 10px;
+  color: var(--secondary-color);
+  font-size: 18px;
+}
+
+/* Total Number of People */
+#totalPeople {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  font-size: 16px;
+  transition: border-color 0.3s ease;
+}
+
+#totalPeople:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+/* Cumulative Price Calculations */
+.cumulative-price-group {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Cumulative Price Subgroup */
+.cumulative-price-subgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Container for Cumulative Prices */
+.cumulative-price-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cumulative-price {
+  flex: 1;
+  padding: 12px 15px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  font-size: 16px;
+  transition: border-color 0.3s ease;
+}
+
+.cumulative-price:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+.calculate-btn.small {
+  padding: 8px 12px;
+  font-size: 14px;
+  background-color: var(--accent-color);
+  color: var(--white);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.calculate-btn.small:hover {
+  background-color: var(--accent-dark);
+}
+
+/* Additional Notes */
+.form-group textarea#additionalNotes {
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 16px;
+  transition: border-color 0.3s ease;
+}
+
+.form-group textarea#additionalNotes:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+/* Submit Button */
+.button-group {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.submit-btn {
+  flex: 1;
+  padding: 12px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  background-color: var(--primary-color);
+  color: var(--white);
+}
+
+.submit-btn:hover {
+  background-color: var(--primary-dark);
+}
+
+/* Deposit */
+#deposit {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  font-size: 16px;
+  transition: border-color 0.3s ease;
+}
+
+#deposit:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+  .room-selection {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  .room-details {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+
+  .room-extras {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .radio-group {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .button-group {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .submit-btn {
+    width: 100%;
+    margin-right: 0;
+  }
+
+  .cumulative-price-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cumulative-price-container .calculate-btn.small {
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .room-option {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .add-reservation {
+    padding: 20px;
+    margin: 20px;
+  }
+
+  .room-option label {
+    font-size: 14px;
+  }
+
+  .room-extra h4 {
+    font-size: 16px;
+  }
+
+  .calculate-btn.small {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  .submit-btn {
+    font-size: 14px;
+    padding: 10px 15px;
+  }
+}

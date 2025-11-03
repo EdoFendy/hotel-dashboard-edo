@@ -1,0 +1,82 @@
+/* src/styles/AddReservation.css */
+
+.report-download {
+  padding: 20px;
+  background-color: #f9f9f9; /* Colore di sfondo chiaro */
+  border-radius: 10px; /* Angoli arrotondati */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Ombra leggera */
+}
+
+.report-download h3 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333; /* Colore del testo */
+}
+
+.report-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 15px; /* Spazio tra i filtri */
+  margin-bottom: 20px; /* Spazio sotto i filtri */
+}
+
+.report-filters label {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+  font-weight: bold;
+  color: #555; /* Colore del testo */
+}
+
+.report-filters select {
+  padding: 8px;
+  font-size: 16px;
+  border: 1px solid #ccc; /* Bordo leggero */
+  border-radius: 5px; /* Angoli arrotondati */
+}
+
+.report-buttons {
+  display: flex;
+  gap: 10px; /* Spazio tra i pulsanti */
+  margin-bottom: 20px; /* Spazio sotto i pulsanti */
+}
+
+.btn {
+  padding: 10px 20px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.pdf-btn {
+  background-color: #f44336; /* Rosso */
+  color: white;
+}
+
+.pdf-btn:hover {
+  background-color: #d32f2f;
+}
+
+.csv-btn {
+  background-color: #4caf50; /* Verde */
+  color: white;
+}
+
+.csv-btn:hover {
+  background-color: #388e3c;
+}
+
+  
+  /* Media query per dispositivi mobili */
+  @media (max-width: 768px) {
+    .report-download {
+      flex-direction: column;
+    }
+  
+    .report-download .btn {
+      width: 100%;
+      text-align: center;
+    }
+  }
