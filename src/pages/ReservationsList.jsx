@@ -153,7 +153,7 @@ function ReservationsList() {
   // ----------------------------
   const handleCheckOut = (reservation) => {
     const summary = summarizeReservationPricing(reservation);
-    const finalTotal = summary.includesExtras ? summary.savedPrice : summary.calculatedTotal;
+    const finalTotal = summary.amountDueBasis;
     const totalToPay = (finalTotal - summary.deposit).toFixed(2);
     setCheckoutReservation({ ...reservation, totalExtras: summary.extrasTotal, totalToPay });
   };
@@ -172,7 +172,7 @@ function ReservationsList() {
 
       // 2. Calcola totali (centralizzati)
       const summary = summarizeReservationPricing(checkoutReservation);
-      const finalTotal = summary.includesExtras ? summary.savedPrice : summary.calculatedTotal;
+      const finalTotal = summary.amountDueBasis;
       const totalAmount = Math.max(0, finalTotal - summary.deposit);
 
       // 3. Salva fattura in Firestore
@@ -185,7 +185,7 @@ function ReservationsList() {
         checkInDate: checkoutReservation.checkInDate,
         checkOutDate: checkoutReservation.checkOutDate,
         roomNumbers: checkoutReservation.roomNumbers || [checkoutReservation.roomNumber],
-        price: summary.savedPrice,
+        price: summary.finalPrice,
         totalExtras: summary.extrasTotal,
         deposit: summary.deposit,
         totalAmount,
@@ -338,7 +338,7 @@ function ReservationsList() {
 
                   // Calcolo dei campi prezzo
                   const summary = summarizeReservationPricing(reservation);
-                  const finalTotal = summary.includesExtras ? summary.savedPrice : summary.calculatedTotal;
+                  const finalTotal = summary.amountDueBasis;
                   const totalToPay = (finalTotal - summary.deposit).toFixed(2);
 
                   return (
@@ -428,7 +428,7 @@ function ReservationsList() {
 
               // Calcolo dei campi prezzo
               const summary = summarizeReservationPricing(reservation);
-              const finalTotal = summary.includesExtras ? summary.savedPrice : summary.calculatedTotal;
+              const finalTotal = summary.amountDueBasis;
               const totalToPay = (finalTotal - summary.deposit).toFixed(2);
 
               return (
@@ -454,7 +454,7 @@ function ReservationsList() {
                         : 'N/A'}
                     </div>
                     <div>
-                      <label>Prezzo (€):</label> € {Number(summary.savedPrice).toFixed(2)}
+                      <label>Prezzo (€):</label> € {Number(summary.finalPrice).toFixed(2)}
                     </div>
                     <div>
                       <label>Extra (€):</label> € {Number(summary.extrasTotal).toFixed(2)}

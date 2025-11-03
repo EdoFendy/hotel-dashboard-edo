@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { N } from '../../utils/pricing';
+import { N, PET_EXTRA, CRIB_EXTRA } from '../../utils/pricing';
 import '../../styles/AddReservation.css';
 
 const ROOM_TYPES = {
@@ -47,9 +47,6 @@ const STEP_LABELS = [
   'Prezzi ed extra',
   'Riepilogo finale',
 ];
-
-const PET_EXTRA = 10;
-const CRIB_EXTRA = 10;
 
 const formatCurrency = (value) => {
   const number = Number.isFinite(value) ? value : N(value);
@@ -553,6 +550,33 @@ function ReservationWizard({
       }
     }
 
+    const pricingMode = state.isGroup ? state.groupPricingMode : state.singlePricingMode;
+    const singlePricing = state.isGroup
+      ? null
+      : {
+          mode: state.singlePricingMode,
+          pricePerNight: state.singlePricingMode === 'perNight' ? N(state.singlePricePerNight) : null,
+          totalForStay: state.singlePricingMode === 'total' ? N(state.singleTotalPrice) : null,
+        };
+    const groupPricing = state.isGroup
+      ? {
+          mode: state.groupPricingMode,
+          perRoomRates:
+            state.groupPricingMode === 'perNightPerRoom'
+              ? state.roomNumbers.reduce((acc, room) => {
+                  acc[room] = N(state.groupPerRoomRates[room]);
+                  return acc;
+                }, {})
+              : {},
+          uniformPerNight:
+            state.groupPricingMode === 'perNightUniform' ? N(state.groupUniformPerNight) : null,
+          totalForStay: state.groupPricingMode === 'totalForStay' ? N(state.groupTotalForStay) : null,
+        }
+      : null;
+    const finalPriceOverride = state.customPrice !== '' && state.customPrice !== null
+      ? N(state.customPrice)
+      : null;
+
     const payload = {
       isGroup: state.isGroup,
       agencyGroupName: state.isGroup ? state.agencyGroupName.trim() : '',
@@ -569,6 +593,10 @@ function ReservationWizard({
       priceWithExtras,
       price: finalPrice,
       deposit: N(state.deposit),
+      pricingMode,
+      singlePricing,
+      groupPricing,
+      finalPriceOverride,
       totalPeople: N(state.totalPeople),
       additionalNotes: state.additionalNotes.trim(),
       extraPerRoom: state.isGroup

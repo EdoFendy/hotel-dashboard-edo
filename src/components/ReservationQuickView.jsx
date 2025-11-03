@@ -8,7 +8,7 @@ import { format, parseISO, isWithinInterval } from 'date-fns';
 import { it } from 'date-fns/locale';
 import useScrollLock from '../hooks/useScrollLock';
 import '../styles/common.css';
-import { summarizeReservationPricing, buildReservationDraftFromForm, N } from '../utils/pricing';
+import { summarizeReservationPricing, N, PET_EXTRA, CRIB_EXTRA, nightsBetween } from '../utils/pricing';
 
 const EURO_FORMATTER = new Intl.NumberFormat('it-IT', {
   style: 'currency',
@@ -48,6 +48,17 @@ const ROOM_CAPACITIES = {
   'Singola': 1,
   'Matrimoniale/Doppia': 2,
 };
+
+const formatCurrency = (value) => {
+  const number = N(value);
+  return number.toLocaleString('it-IT', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+  });
+};
+
+const roundCurrencyValue = (value) => Math.round(N(value) * 100) / 100;
 
 /**
  * Drawer riutilizzabile per visualizzare e modificare rapidamente le prenotazioni
@@ -113,29 +124,76 @@ function ReservationQuickView({ reservationId, isOpen, onClose, onUpdate}) {
       if (reservationSnap.exists()) {
         const data = { id: reservationSnap.id, ...reservationSnap.data() };
         setReservation(data);
+
+        const isGroup = !!data.isGroup;
+        const checkIn = data.checkInDate ? data.checkInDate.toDate() : null;
+        const checkOut = data.checkOutDate ? data.checkOutDate.toDate() : null;
+        const nights = checkIn && checkOut ? nightsBetween(checkIn, checkOut) : 0;
+        const baseWithoutExtras = N(data.priceWithoutExtras);
+        const pricingMode = data.pricingMode
+          || (isGroup ? data.groupPricing?.mode : data.singlePricing?.mode)
+          || (isGroup ? 'perNightPerRoom' : 'perNight');
+
+        const singlePricePerNight = !isGroup
+          ? (data.singlePricing?.pricePerNight ?? (nights > 0 ? baseWithoutExtras / nights : 0))
+          : 0;
+        const singleTotalForStay = !isGroup
+          ? (data.singlePricing?.totalForStay ?? baseWithoutExtras)
+          : 0;
+
+        const groupPerRoomRates = isGroup
+          ? (data.roomNumbers || []).reduce((acc, room) => {
+              const rate = data.groupPricing?.perRoomRates?.[room] ?? data.roomPrices?.[room] ?? 0;
+              acc[room] = String(rate || 0);
+              return acc;
+            }, {})
+          : {};
+
+        const initialExtras = isGroup
+          ? data.extraPerRoom || {}
+          : {
+              extraBar: data.extraPerRoom?.extraBar ?? 0,
+              extraServizi: data.extraPerRoom?.extraServizi ?? 0,
+              petAllowed: !!data.extraPerRoom?.petAllowed,
+            };
+
+        const initialCribs = isGroup
+          ? data.roomCribs || {}
+          : !!(typeof data.roomCribs === 'boolean' ? data.roomCribs : false);
+
         setFormData({
-          isGroup: data.isGroup || false,
+          isGroup,
           agencyGroupName: data.agencyGroupName || '',
           guestName: data.guestName || '',
           phoneNumber: data.phoneNumber || '',
           price: data.price || 0,
-          deposit: data.deposit || 0,
+          deposit: data.deposit !== undefined && data.deposit !== null ? String(data.deposit) : '',
           status: data.status || 'in_attesa',
           guestsArrived: data.guestsArrived || {},
           additionalNotes: data.additionalNotes || '',
-          checkInDate: data.checkInDate ? format(data.checkInDate.toDate(), 'yyyy-MM-dd') : '',
-          checkOutDate: data.checkOutDate ? format(data.checkOutDate.toDate(), 'yyyy-MM-dd') : '',
+          checkInDate: checkIn ? format(checkIn, 'yyyy-MM-dd') : '',
+          checkOutDate: checkOut ? format(checkOut, 'yyyy-MM-dd') : '',
           paymentCompleted: data.paymentCompleted || false,
           totalPeople: data.totalPeople || 0,
-          priceWithoutExtras: data.priceWithoutExtras || 0,
+          priceWithoutExtras: baseWithoutExtras,
           priceWithExtras: data.priceWithExtras || 0,
-          // Campi per multiple camere
           roomNumbers: data.roomNumbers || [],
           roomCustomNames: data.roomCustomNames || {},
           roomPrices: data.roomPrices || {},
-          extraPerRoom: data.extraPerRoom || {},
-          roomCribs: data.isGroup ? (data.roomCribs || {}) : !!data.roomCribs,
-          customPrice: '',
+          extraPerRoom: initialExtras,
+          roomCribs: initialCribs,
+          customPrice: data.finalPriceOverride !== undefined && data.finalPriceOverride !== null
+            ? String(data.finalPriceOverride)
+            : '',
+          singlePricingMode: !isGroup && pricingMode === 'total' ? 'total' : 'perNight',
+          singlePricePerNight: !isGroup ? (singlePricePerNight ? String(singlePricePerNight) : '') : '',
+          singleTotalPrice: !isGroup ? (singleTotalForStay ? String(singleTotalForStay) : '') : '',
+          groupPricingMode: isGroup ? pricingMode : 'perNightPerRoom',
+          groupPerRoomRates,
+          groupUniformPerNight: isGroup && data.groupPricing?.uniformPerNight ? String(data.groupPricing.uniformPerNight) : '',
+          groupTotalForStay: isGroup
+            ? (data.groupPricing?.totalForStay ? String(data.groupPricing.totalForStay) : String(baseWithoutExtras))
+            : '',
         });
         
         // Carica conflitti stanze se ci sono date
@@ -188,9 +246,8 @@ function ReservationQuickView({ reservationId, isOpen, onClose, onUpdate}) {
       await updateDoc(reservationRef, {
         extraPerRoom: newExtraPerRoom,
         roomCribs: newRoomCribs,
-        price: summary.calculatedTotal,
-        priceWithExtras: summary.calculatedTotal,
-        priceWithoutExtras: summary.base,
+        priceWithExtras: roundCurrencyValue(summary.base + summary.extrasTotal),
+        priceWithoutExtras: roundCurrencyValue(summary.base),
         updatedAt: Timestamp.now(),
       });
 
@@ -240,9 +297,8 @@ function ReservationQuickView({ reservationId, isOpen, onClose, onUpdate}) {
       await updateDoc(reservationRef, {
         extraPerRoom: newExtras,
         roomCribs: roomCribs,
-        price: summary.calculatedTotal,
-        priceWithExtras: summary.calculatedTotal,
-        priceWithoutExtras: summary.base,
+        priceWithExtras: roundCurrencyValue(summary.base + summary.extrasTotal),
+        priceWithoutExtras: roundCurrencyValue(summary.base),
         updatedAt: Timestamp.now(),
       });
 
@@ -293,20 +349,192 @@ function ReservationQuickView({ reservationId, isOpen, onClose, onUpdate}) {
     });
   };
 
-  const editingDraft = useMemo(() => buildReservationDraftFromForm(formData), [formData]);
-  const editingSummary = useMemo(() => summarizeReservationPricing(editingDraft), [editingDraft]);
-  const customPriceValue = formData.customPrice !== undefined && formData.customPrice !== ''
-    ? N(formData.customPrice)
-    : null;
-  const finalPricePreview = customPriceValue !== null
-    ? customPriceValue
-    : (N(formData.price) > 0 ? N(formData.price) : editingSummary.calculatedTotal);
-  const amountDuePreview = Math.max(0, finalPricePreview - N(formData.deposit));
+  const handleSinglePricingModeChange = (mode) => {
+    setFormData((prev) => ({
+      ...prev,
+      singlePricingMode: mode,
+      singlePricePerNight: mode === 'perNight' ? prev.singlePricePerNight : '',
+      singleTotalPrice: mode === 'total' ? prev.singleTotalPrice : '',
+    }));
+  };
+
+  const handleGroupPricingModeChange = (mode) => {
+    setFormData((prev) => ({
+      ...prev,
+      groupPricingMode: mode,
+    }));
+  };
+
+  const handleGroupPerRoomRateChange = (room, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      groupPerRoomRates: {
+        ...(prev.groupPerRoomRates || {}),
+        [room]: value,
+      },
+    }));
+  };
+
+  const handleGroupUniformPerNightChange = (value) => {
+    setFormData((prev) => ({
+      ...prev,
+      groupUniformPerNight: value,
+    }));
+  };
+
+  const handleGroupTotalForStayChange = (value) => {
+    setFormData((prev) => ({
+      ...prev,
+      groupTotalForStay: value,
+    }));
+  };
+
+  const handleSingleExtraChange = (field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      extraPerRoom: {
+        ...(prev.extraPerRoom || {}),
+        [field]: field === 'petAllowed' ? value : Number(value),
+      },
+    }));
+  };
+
+  const handleGroupExtraChange = (room, field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      extraPerRoom: {
+        ...(prev.extraPerRoom || {}),
+        [room]: {
+          ...(prev.extraPerRoom?.[room] || {}),
+          [field]: field === 'petAllowed' ? value : Number(value),
+        },
+      },
+    }));
+  };
+
+  const handleGroupCribChange = (room, checked) => {
+    setFormData((prev) => ({
+      ...prev,
+      roomCribs: {
+        ...(typeof prev.roomCribs === 'object' ? prev.roomCribs : {}),
+        [room]: checked,
+      },
+    }));
+  };
+
+  const handleSingleCribChange = (checked) => {
+    setFormData((prev) => ({
+      ...prev,
+      roomCribs: checked,
+    }));
+  };
+
+  const editingNights = useMemo(() => {
+    if (!formData.checkInDate || !formData.checkOutDate) return 0;
+    const start = new Date(formData.checkInDate);
+    const end = new Date(formData.checkOutDate);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
+    const diff = end.setHours(0, 0, 0, 0) - start.setHours(0, 0, 0, 0);
+    const nights = Math.round(diff / (1000 * 60 * 60 * 24));
+    return nights > 0 ? nights : 0;
+  }, [formData.checkInDate, formData.checkOutDate]);
+
+  const basePricePreview = useMemo(() => {
+    if (formData.isGroup) {
+      if (formData.groupPricingMode === 'totalForStay') {
+        return Math.max(0, N(formData.groupTotalForStay));
+      }
+      if (formData.groupPricingMode === 'perNightUniform') {
+        const perNight = N(formData.groupUniformPerNight);
+        return Math.max(0, perNight * editingNights * (formData.roomNumbers?.length || 0));
+      }
+      const rooms = Array.isArray(formData.roomNumbers) ? formData.roomNumbers : [];
+      return rooms.reduce((acc, room) => acc + N(formData.groupPerRoomRates?.[room]) * editingNights, 0);
+    }
+
+    if (formData.singlePricingMode === 'total') {
+      return Math.max(0, N(formData.singleTotalPrice));
+    }
+    const perNight = N(formData.singlePricePerNight);
+    return Math.max(0, perNight * editingNights);
+  }, [formData, editingNights]);
+
+  const extrasTotalPreview = useMemo(() => {
+    if (formData.isGroup) {
+      const rooms = Array.isArray(formData.roomNumbers) ? formData.roomNumbers : [];
+      return rooms.reduce((acc, room) => {
+        const extras = formData.extraPerRoom?.[room] || {};
+        const bar = N(extras.extraBar);
+        const servizi = N(extras.extraServizi);
+        const pet = extras.petAllowed ? PET_EXTRA : 0;
+        const crib = formData.roomCribs?.[room] ? CRIB_EXTRA : 0;
+        return acc + bar + servizi + pet + crib;
+      }, 0);
+    }
+
+    const extras = formData.extraPerRoom || {};
+    const bar = N(extras.extraBar);
+    const servizi = N(extras.extraServizi);
+    const pet = extras.petAllowed ? PET_EXTRA : 0;
+    const crib = formData.roomCribs ? CRIB_EXTRA : 0;
+    return bar + servizi + pet + crib;
+  }, [formData]);
+
+  const suggestedTotalPreview = basePricePreview + extrasTotalPreview;
+
+  const finalPricePreview = useMemo(() => {
+    if (formData.customPrice !== undefined && formData.customPrice !== '') {
+      return N(formData.customPrice);
+    }
+    const saved = N(formData.price);
+    if (saved > 0) {
+      return saved;
+    }
+    return suggestedTotalPreview;
+  }, [formData.customPrice, formData.price, suggestedTotalPreview]);
+
+  const finalPriceIncludesExtrasPreview = useMemo(() => {
+    return Math.abs(finalPricePreview - suggestedTotalPreview) < 0.009;
+  }, [finalPricePreview, suggestedTotalPreview]);
+
+  const finalPriceMatchesBasePreview = useMemo(() => {
+    return Math.abs(finalPricePreview - basePricePreview) < 0.009;
+  }, [finalPricePreview, basePricePreview]);
+
+  const extrasAppliedToDuePreview = useMemo(() => {
+    if (extrasTotalPreview <= 0) return 0;
+    if (finalPriceIncludesExtrasPreview) return 0;
+    return extrasTotalPreview;
+  }, [extrasTotalPreview, finalPriceIncludesExtrasPreview]);
+
+  const amountDueBasisPreview = useMemo(() => {
+    return finalPricePreview + extrasAppliedToDuePreview;
+  }, [finalPricePreview, extrasAppliedToDuePreview]);
+
+  const amountDuePreview = useMemo(() => {
+    return Math.max(0, amountDueBasisPreview - N(formData.deposit));
+  }, [amountDueBasisPreview, formData.deposit]);
+
+  const previewDifference = finalPricePreview - suggestedTotalPreview;
+  const hasPreviewDifference = Math.abs(previewDifference) > 0.009;
+
+  const previewInterpretation = extrasTotalPreview > 0
+    ? (extrasAppliedToDuePreview > 0
+        ? 'Prezzo finale non include gli extra: verranno sommati al pagamento.'
+        : finalPriceIncludesExtrasPreview
+          ? 'Prezzo finale già comprensivo degli extra.'
+          : finalPriceMatchesBasePreview
+            ? 'Prezzo finale uguale al prezzo base. Controlla se includere gli extra.'
+            : '')
+    : '';
 
   const switchEditToSingle = () => {
     setFormData(prev => ({
       ...prev,
       isGroup: false,
+      singlePricingMode: prev.singlePricingMode || 'perNight',
+      singlePricePerNight: prev.singlePricingMode === 'perNight' ? prev.singlePricePerNight : '',
+      singleTotalPrice: prev.singlePricingMode === 'total' ? prev.singleTotalPrice : '',
       extraPerRoom: {
         extraBar: N(prev.extraPerRoom?.extraBar),
         extraServizi: N(prev.extraPerRoom?.extraServizi),
@@ -320,6 +548,7 @@ function ReservationQuickView({ reservationId, isOpen, onClose, onUpdate}) {
     setFormData(prev => {
       const extras = {};
       const cribs = {};
+      const rates = {};
       (prev.roomNumbers || []).forEach((room) => {
         const roomKey = Number(room);
         const existing = prev.extraPerRoom?.[roomKey] || prev.extraPerRoom?.[room] || {};
@@ -329,10 +558,16 @@ function ReservationQuickView({ reservationId, isOpen, onClose, onUpdate}) {
           petAllowed: !!existing.petAllowed,
         };
         cribs[roomKey] = !!(prev.roomCribs && prev.roomCribs[roomKey]);
+        const currentRate = prev.groupPerRoomRates?.[roomKey] || prev.roomPrices?.[roomKey] || 0;
+        rates[roomKey] = String(currentRate);
       });
       return {
         ...prev,
         isGroup: true,
+        groupPricingMode: prev.groupPricingMode || 'perNightPerRoom',
+        groupPerRoomRates: rates,
+        groupUniformPerNight: prev.groupUniformPerNight || '',
+        groupTotalForStay: prev.groupTotalForStay || String(prev.priceWithoutExtras || ''),
         extraPerRoom: extras,
         roomCribs: cribs,
       };
@@ -399,66 +634,123 @@ function ReservationQuickView({ reservationId, isOpen, onClose, onUpdate}) {
     setLoading(true);
     setError('');
     setSuccess('');
-    
+
     try {
-      const draftForPricing = buildReservationDraftFromForm(formData);
-      const recommendedSummary = summarizeReservationPricing(draftForPricing);
-      const customPrice = formData.customPrice !== undefined && formData.customPrice !== ''
-        ? N(formData.customPrice)
+      const isGroup = !!formData.isGroup;
+      const roomNumbers = Array.isArray(formData.roomNumbers) ? formData.roomNumbers : [];
+      const priceWithoutExtras = roundCurrencyValue(basePricePreview);
+      const priceWithExtras = roundCurrencyValue(suggestedTotalPreview);
+      const priceToSave = roundCurrencyValue(finalPricePreview);
+      const depositValue = roundCurrencyValue(formData.deposit);
+      const finalPriceOverride = formData.customPrice !== undefined && formData.customPrice !== ''
+        ? roundCurrencyValue(formData.customPrice)
         : null;
-      const priceFromForm = N(formData.price);
-      const priceToSave = customPrice !== null
-        ? customPrice
-        : (priceFromForm > 0 ? priceFromForm : recommendedSummary.calculatedTotal);
-      const finalSummary = summarizeReservationPricing({ ...draftForPricing, price: priceToSave });
+
+      const roomPrices = {};
+      if (isGroup) {
+        if (formData.groupPricingMode === 'perNightPerRoom') {
+          roomNumbers.forEach((room) => {
+            roomPrices[room] = roundCurrencyValue(formData.groupPerRoomRates?.[room]);
+          });
+        } else if (formData.groupPricingMode === 'perNightUniform') {
+          const perNight = roundCurrencyValue(formData.groupUniformPerNight);
+          roomNumbers.forEach((room) => {
+            roomPrices[room] = perNight;
+          });
+        } else if (formData.groupPricingMode === 'totalForStay') {
+          const divisor = Math.max(1, editingNights * (roomNumbers.length || 1));
+          const perNight = divisor > 0 ? roundCurrencyValue(N(formData.groupTotalForStay) / divisor) : 0;
+          roomNumbers.forEach((room) => {
+            roomPrices[room] = perNight;
+          });
+        }
+      }
+
+      const extraPerRoom = isGroup
+        ? roomNumbers.reduce((acc, room) => {
+            const extras = formData.extraPerRoom?.[room] || {};
+            acc[room] = {
+              extraBar: N(extras.extraBar),
+              extraServizi: N(extras.extraServizi),
+              petAllowed: !!extras.petAllowed,
+            };
+            return acc;
+          }, {})
+        : {
+            extraBar: N(formData.extraPerRoom?.extraBar),
+            extraServizi: N(formData.extraPerRoom?.extraServizi),
+            petAllowed: !!formData.extraPerRoom?.petAllowed,
+          };
+
+      const roomCribs = isGroup
+        ? roomNumbers.reduce((acc, room) => {
+            acc[room] = !!(formData.roomCribs && formData.roomCribs[room]);
+            return acc;
+          }, {})
+        : !!formData.roomCribs;
+
+      const singlePricing = !isGroup
+        ? {
+            mode: formData.singlePricingMode,
+            pricePerNight: formData.singlePricingMode === 'perNight' ? N(formData.singlePricePerNight) : null,
+            totalForStay: formData.singlePricingMode === 'total' ? N(formData.singleTotalPrice) : null,
+          }
+        : null;
+
+      const groupPricing = isGroup
+        ? {
+            mode: formData.groupPricingMode,
+            perRoomRates: roomPrices,
+            uniformPerNight: formData.groupPricingMode === 'perNightUniform' ? N(formData.groupUniformPerNight) : null,
+            totalForStay: formData.groupPricingMode === 'totalForStay' ? N(formData.groupTotalForStay) : null,
+          }
+        : null;
 
       const updateData = {
-        isGroup: formData.isGroup || false,
-        agencyGroupName: formData.isGroup ? (formData.agencyGroupName || '') : '',
-        guestName: formData.isGroup ? formData.agencyGroupName : formData.guestName,
+        isGroup,
+        agencyGroupName: isGroup ? (formData.agencyGroupName || '') : '',
+        guestName: isGroup ? formData.agencyGroupName : formData.guestName,
         phoneNumber: formData.phoneNumber,
         price: priceToSave,
-        priceWithoutExtras: finalSummary.base,
-        priceWithExtras: finalSummary.calculatedTotal,
-        deposit: finalSummary.deposit,
+        priceWithoutExtras,
+        priceWithExtras,
+        deposit: depositValue,
+        pricingMode: isGroup ? formData.groupPricingMode : formData.singlePricingMode,
+        singlePricing,
+        groupPricing,
+        finalPriceOverride,
         status: formData.status,
         guestsArrived: formData.guestsArrived,
         additionalNotes: formData.additionalNotes,
         paymentCompleted: formData.paymentCompleted,
         totalPeople: Number(formData.totalPeople) || 0,
+        extraPerRoom,
+        roomCribs,
         updatedAt: Timestamp.now(),
       };
-      
-      // Se le date sono state modificate, aggiornale
-      if (formData.checkInDate && formData.checkOutDate) {
+
+      if (formData.checkInDate) {
         updateData.checkInDate = Timestamp.fromDate(new Date(formData.checkInDate));
+      }
+      if (formData.checkOutDate) {
         updateData.checkOutDate = Timestamp.fromDate(new Date(formData.checkOutDate));
       }
-      
-      // Salva dati camere se presenti
-      if (formData.roomNumbers && formData.roomNumbers.length > 0) {
-        updateData.roomNumbers = formData.roomNumbers;
+
+      if (roomNumbers.length > 0) {
+        updateData.roomNumbers = roomNumbers;
         updateData.roomCustomNames = formData.roomCustomNames || {};
-        updateData.roomPrices = formData.roomPrices || {};
-        updateData.extraPerRoom = formData.extraPerRoom || {};
-        updateData.roomCribs = formData.isGroup ? (formData.roomCribs || {}) : !!formData.roomCribs;
+        updateData.roomPrices = roomPrices;
       }
 
       const reservationRef = doc(db, 'reservations', reservationId);
       await updateDoc(reservationRef, updateData);
-      
+
       setSuccess('Prenotazione aggiornata con successo!');
       setIsEditing(false);
-      
-      // Ricarica i dati
       await loadReservation();
-      
-      // Notifica il parent component
       if (onUpdate) {
         onUpdate();
       }
-      
-      // Auto-chiudi dopo 2 secondi
       setTimeout(() => {
         setSuccess('');
       }, 2000);
@@ -494,6 +786,17 @@ function ReservationQuickView({ reservationId, isOpen, onClose, onUpdate}) {
 
   // Pricing summary (always derived from reservation data)
   const pricing = reservation ? summarizeReservationPricing(reservation) : null;
+  const finalPriceDifference = pricing ? pricing.finalPrice - pricing.calculatedTotal : 0;
+  const hasPriceOverride = pricing ? Math.abs(finalPriceDifference) > 0.009 : false;
+  const amountDueInterpretation = pricing && pricing.extrasTotal > 0
+    ? (pricing.extrasAppliedToDue > 0
+        ? 'Prezzo salvato NON include gli extra: saranno sommati al pagamento.'
+        : pricing.finalPriceIncludesExtras
+          ? 'Prezzo salvato già comprensivo degli extra.'
+          : pricing.finalPriceMatchesBase
+            ? 'Prezzo salvato coincide con il prezzo base. Verifica gli extra.'
+            : '')
+    : '';
 
   // Usa Portal per renderizzare il drawer direttamente nel body, bypassando backdrop-filter
   return createPortal(
@@ -580,7 +883,7 @@ function ReservationQuickView({ reservationId, isOpen, onClose, onUpdate}) {
 
                             // 2. Calcola totali (centralizzato)
                             const summary = summarizeReservationPricing(reservation);
-                            const finalTotal = summary.includesExtras ? summary.savedPrice : summary.calculatedTotal;
+                            const finalTotal = summary.amountDueBasis;
                             const totalAmount = Math.max(0, finalTotal - summary.deposit);
 
                             // 3. Salva fattura in Firestore
@@ -593,7 +896,7 @@ function ReservationQuickView({ reservationId, isOpen, onClose, onUpdate}) {
                               checkInDate: reservation.checkInDate,
                               checkOutDate: reservation.checkOutDate,
                               roomNumbers: reservation.roomNumbers || [reservation.roomNumber],
-                              price: summary.savedPrice,
+                              price: summary.finalPrice,
                               totalExtras: summary.extrasTotal,
                               deposit: summary.deposit,
                               totalAmount,
@@ -736,43 +1039,83 @@ function ReservationQuickView({ reservationId, isOpen, onClose, onUpdate}) {
 
               <div className="panel">
                 <h3 className="panel-title">Dettagli Economici</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginTop: '1rem' }}>
-                  <div>
-                    <strong style={{ fontSize: '0.85rem', color: 'rgba(15, 23, 42, 0.65)' }}>Prezzo Base</strong>
-                    <p style={{ margin: '0.25rem 0 0', fontSize: '1.1rem' }}>€ {pricing ? pricing.base.toFixed(2) : '0.00'}</p>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: '1rem',
+                    marginTop: '1rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'rgba(15, 23, 42, 0.65)' }}>Prezzo base</span>
+                    <strong style={{ fontSize: '1.2rem' }}>{pricing ? formatCurrency(pricing.base) : formatCurrency(0)}</strong>
+                    {pricing?.baseBreakdown && (
+                      <small style={{ color: 'rgba(15, 23, 42, 0.6)' }}>{pricing.baseBreakdown}</small>
+                    )}
+                    {pricing?.pricingLabel && (
+                      <small style={{ color: 'rgba(15, 23, 42, 0.6)' }}>Metodo: {pricing.pricingLabel}</small>
+                    )}
                   </div>
-                  <div>
-                    <strong style={{ fontSize: '0.85rem', color: 'rgba(15, 23, 42, 0.65)' }}>Extras</strong>
-                    <p style={{ margin: '0.25rem 0 0', fontSize: '1.1rem' }}>€ {pricing ? pricing.extrasTotal.toFixed(2) : '0.00'}</p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'rgba(15, 23, 42, 0.65)' }}>Extra</span>
+                    <strong style={{ fontSize: '1.2rem' }}>{pricing ? formatCurrency(pricing.extrasTotal) : formatCurrency(0)}</strong>
+                    <div style={{ fontSize: '0.85rem', color: 'rgba(15, 23, 42, 0.65)' }}>
+                      {pricing && pricing.extrasItems.length > 0 ? (
+                        <ul style={{ margin: 0, paddingLeft: '1.15rem', display: 'grid', gap: '0.25rem' }}>
+                          {pricing.extrasItems.map((item) => (
+                            <li key={item.key}>
+                              {item.label}: {formatCurrency(item.amount)}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <span>Nessun extra registrato</span>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <strong style={{ fontSize: '0.85rem', color: 'rgba(15, 23, 42, 0.65)' }}>Totale Calcolato</strong>
-                    <p style={{ margin: '0.25rem 0 0', fontSize: '1.1rem', fontWeight: 600 }}>€ {pricing ? pricing.calculatedTotal.toFixed(2) : '0.00'}</p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'rgba(15, 23, 42, 0.65)' }}>Totale suggerito</span>
+                    <strong style={{ fontSize: '1.2rem' }}>{pricing ? formatCurrency(pricing.calculatedTotal) : formatCurrency(0)}</strong>
+                    <small style={{ color: 'rgba(15, 23, 42, 0.6)' }}>Prezzo base + extra</small>
                   </div>
-                  <div>
-                    <strong style={{ fontSize: '0.85rem', color: 'rgba(15, 23, 42, 0.65)' }}>Prezzo Salvato</strong>
-                    <p style={{ margin: '0.25rem 0 0', fontSize: '1.1rem', fontWeight: 600, color: '#15294F' }}>€ {pricing ? pricing.savedPrice.toFixed(2) : '0.00'}</p>
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '0.85rem', color: 'rgba(15, 23, 42, 0.65)' }}>Caparra</strong>
-                    <p style={{ margin: '0.25rem 0 0', fontSize: '1.1rem', color: '#22c55e', fontWeight: 600 }}>€ {pricing ? pricing.deposit.toFixed(2) : '0.00'}</p>
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '0.85rem', color: 'rgba(15, 23, 42, 0.65)' }}>Da Pagare</strong>
-                    <p style={{ margin: '0.25rem 0 0', fontSize: '1.2rem', fontWeight: 700 }}>
-                      € {pricing ? (pricing.includesExtras ? pricing.dueUsingSaved : pricing.dueUsingCalculated).toFixed(2) : '0.00'}
-                    </p>
-                    {pricing && (
-                      <small style={{ color: 'rgba(15,23,42,.6)' }}>
-                        {pricing.includesExtras ? 'Interpretazione: Prezzo salvato include gli extra' : 'Interpretazione: Prezzo salvato NON include gli extra'}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'rgba(15, 23, 42, 0.65)' }}>Prezzo finale salvato</span>
+                    <strong style={{ fontSize: '1.2rem', color: '#15294F' }}>{pricing ? formatCurrency(pricing.finalPrice) : formatCurrency(0)}</strong>
+                    <small style={{ color: 'rgba(15, 23, 42, 0.6)' }}>Totale finale (extra inclusi)</small>
+                    {hasPriceOverride && (
+                      <small style={{ color: finalPriceDifference > 0 ? '#059669' : '#b91c1c', fontWeight: 600 }}>
+                        Prezzo finale salvato – Totale suggerito: {formatCurrency(finalPriceDifference)}
                       </small>
                     )}
                   </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'rgba(15, 23, 42, 0.65)' }}>Caparra ricevuta</span>
+                    <strong style={{ fontSize: '1.2rem', color: '#22c55e' }}>{pricing ? formatCurrency(pricing.deposit) : formatCurrency(0)}</strong>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'rgba(15, 23, 42, 0.65)' }}>Da pagare</span>
+                    <strong style={{ fontSize: '1.4rem' }}>{pricing ? formatCurrency(pricing.amountDue) : formatCurrency(0)}</strong>
+                    {pricing && pricing.extrasAppliedToDue > 0 && (
+                      <small style={{ color: 'rgba(15, 23, 42, 0.6)' }}>
+                        Extra sommati al pagamento: {formatCurrency(pricing.extrasAppliedToDue)}
+                      </small>
+                    )}
+                    {amountDueInterpretation && (
+                      <small style={{ color: 'rgba(15, 23, 42, 0.6)' }}>{amountDueInterpretation}</small>
+                    )}
+                  </div>
                 </div>
-                {pricing && Math.abs(pricing.savedPrice - pricing.calculatedTotal) > 0.01 && (
-                  <div style={{ marginTop: '0.75rem', display: 'flex', gap: '.5rem', alignItems: 'center' }}>
+
+                {pricing && hasPriceOverride && (
+                  <div style={{ marginTop: '0.75rem', display: 'flex', gap: '.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '.9rem', color: '#7c3aed' }}>
-                      Differenza: € {(pricing.savedPrice - pricing.calculatedTotal).toFixed(2)}
+                      Allineare il prezzo finale al totale suggerito?
                     </span>
                     <button
                       className="btn btn-sm btn--primary"
@@ -784,18 +1127,21 @@ function ReservationQuickView({ reservationId, isOpen, onClose, onUpdate}) {
                             price: pricing.calculatedTotal,
                             priceWithExtras: pricing.calculatedTotal,
                             priceWithoutExtras: pricing.base,
+                            finalPriceOverride: null,
                             updatedAt: Timestamp.now(),
                           });
                           await loadReservation();
-                          setSuccess('Prezzo allineato al totale calcolato');
+                          setSuccess('Prezzo allineato al totale suggerito');
                           setTimeout(() => setSuccess(''), 2000);
                         } catch (err) {
                           console.error(err);
                           setError('Errore durante l\'allineamento del prezzo');
-                        } finally { setLoading(false); }
+                        } finally {
+                          setLoading(false);
+                        }
                       }}
                     >
-                      Allinea Prezzo Salvato
+                      Allinea al totale suggerito
                     </button>
                   </div>
                 )}
@@ -1232,117 +1578,368 @@ function ReservationQuickView({ reservationId, isOpen, onClose, onUpdate}) {
                     </h4>
 
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.85rem', color: 'rgba(15, 23, 42, 0.7)' }}>
-                      <span><strong>Notte/i:</strong> {editingSummary.nights}</span>
+                      <span><strong>Notte/i:</strong> {editingNights}</span>
                       <span><strong>Camere:</strong> {formData.roomNumbers.length || 1}</span>
-                      <span><strong>Prezzo salvato attuale:</strong> € {N(formData.price).toFixed(2)}</span>
+                      <span><strong>Prezzo salvato:</strong> {formatCurrency(formData.price)}</span>
                     </div>
 
                     {formData.isGroup ? (
-                      <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: 'rgba(15, 23, 42, 0.7)', background: 'rgba(226, 232, 240, 0.5)', padding: '0.75rem', borderRadius: 'var(--radius-sm)' }}>
-                        Il prezzo base deriva dalla somma dei prezzi per notte inseriti nella sezione Camere.
-                        Modifica quelle cifre per aggiornare il totale.
+                      <div style={{ marginTop: '1rem', display: 'grid', gap: '1rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Metodo di calcolo</span>
+                          <div style={{ display: 'grid', gap: '0.35rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                              <input
+                                type="radio"
+                                checked={formData.groupPricingMode === 'perNightPerRoom'}
+                                onChange={() => handleGroupPricingModeChange('perNightPerRoom')}
+                              />
+                              Prezzo per notte per camera
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                              <input
+                                type="radio"
+                                checked={formData.groupPricingMode === 'perNightUniform'}
+                                onChange={() => handleGroupPricingModeChange('perNightUniform')}
+                              />
+                              Prezzo per notte uguale per tutte le camere
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                              <input
+                                type="radio"
+                                checked={formData.groupPricingMode === 'totalForStay'}
+                                onChange={() => handleGroupPricingModeChange('totalForStay')}
+                              />
+                              Totale complessivo per il soggiorno
+                            </label>
+                          </div>
+                        </div>
+
+                        {formData.groupPricingMode === 'perNightPerRoom' && (
+                          <div style={{ display: 'grid', gap: '0.5rem' }}>
+                            {formData.roomNumbers.map((room) => (
+                              <div key={room} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span style={{ minWidth: '120px', fontSize: '0.85rem' }}>Camera {room}</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={formData.groupPerRoomRates?.[room] || ''}
+                                  onChange={(e) => handleGroupPerRoomRateChange(room, e.target.value)}
+                                  placeholder="€/notte"
+                                  style={{ flex: 1 }}
+                                />
+                              </div>
+                            ))}
+                            {formData.roomNumbers.length === 0 && (
+                              <p style={{ fontSize: '0.85rem', color: 'rgba(15, 23, 42, 0.6)' }}>
+                                Seleziona almeno una camera per impostare il prezzo per notte.
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {formData.groupPricingMode === 'perNightUniform' && (
+                          <div>
+                            <label style={{ fontSize: '0.85rem', fontWeight: '500', display: 'block', marginBottom: '0.35rem' }}>
+                              Prezzo per notte per camera
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={formData.groupUniformPerNight}
+                              onChange={(e) => handleGroupUniformPerNightChange(e.target.value)}
+                              placeholder="€/notte"
+                              style={{ width: '100%' }}
+                            />
+                          </div>
+                        )}
+
+                        {formData.groupPricingMode === 'totalForStay' && (
+                          <div>
+                            <label style={{ fontSize: '0.85rem', fontWeight: '500', display: 'block', marginBottom: '0.35rem' }}>
+                              Totale soggiorno
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={formData.groupTotalForStay}
+                              onChange={(e) => handleGroupTotalForStayChange(e.target.value)}
+                              placeholder="Totale complessivo"
+                              style={{ width: '100%' }}
+                            />
+                          </div>
+                        )}
+
+                        <div style={{ borderTop: '1px solid rgba(226, 232, 240, 0.7)', paddingTop: '1rem', display: 'grid', gap: '1rem' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Extra e servizi per camera</span>
+                          {formData.roomNumbers.length === 0 && (
+                            <p style={{ fontSize: '0.85rem', color: 'rgba(15, 23, 42, 0.6)' }}>
+                              Seleziona le camere per configurare gli extra.
+                            </p>
+                          )}
+                          {formData.roomNumbers.map((room) => {
+                            const extras = formData.extraPerRoom?.[room] || {};
+                            return (
+                              <div
+                                key={room}
+                                style={{
+                                  padding: '0.75rem',
+                                  background: 'rgba(248, 250, 252, 0.9)',
+                                  borderRadius: 'var(--radius-sm)',
+                                  border: '1px solid rgba(226, 232, 240, 0.8)',
+                                  display: 'grid',
+                                  gap: '0.5rem',
+                                }}
+                              >
+                                <strong style={{ fontSize: '0.9rem', color: '#15294F' }}>Camera {room}</strong>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem', alignItems: 'center' }}>
+                                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={!!extras.petAllowed}
+                                      onChange={(e) => handleGroupExtraChange(room, 'petAllowed', e.target.checked)}
+                                    />
+                                    Animali (+{formatCurrency(PET_EXTRA)})
+                                  </label>
+                                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={!!formData.roomCribs?.[room]}
+                                      onChange={(e) => handleGroupCribChange(room, e.target.checked)}
+                                    />
+                                    Culla (+{formatCurrency(CRIB_EXTRA)})
+                                  </label>
+                                  <div>
+                                    <label style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.25rem' }}>Extra Bar (€)</label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={extras.extraBar ?? ''}
+                                      onChange={(e) => handleGroupExtraChange(room, 'extraBar', e.target.value)}
+                                      placeholder="0"
+                                      style={{ width: '100%' }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.25rem' }}>Extra Servizi (€)</label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={extras.extraServizi ?? ''}
+                                      onChange={(e) => handleGroupExtraChange(room, 'extraServizi', e.target.value)}
+                                      placeholder="0"
+                                      style={{ width: '100%' }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     ) : (
-                      <div style={{ marginTop: '0.75rem' }}>
-                        <label style={{ fontSize: '0.85rem', fontWeight: '500', display: 'block', marginBottom: '0.35rem' }}>
-                          Prezzo Base (totale soggiorno, senza extra)
-                        </label>
-                        <input
-                          type="number"
-                          name="priceWithoutExtras"
-                          value={formData.priceWithoutExtras}
-                          onChange={handleInputChange}
-                          min="0"
-                          step="0.01"
-                          placeholder="Es. 220"
-                          style={{ width: '100%' }}
-                        />
+                      <div style={{ marginTop: '1rem', display: 'grid', gap: '1rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Metodo di calcolo</span>
+                          <div style={{ display: 'grid', gap: '0.35rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                              <input
+                                type="radio"
+                                checked={formData.singlePricingMode === 'perNight'}
+                                onChange={() => handleSinglePricingModeChange('perNight')}
+                              />
+                              Prezzo per notte
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                              <input
+                                type="radio"
+                                checked={formData.singlePricingMode === 'total'}
+                                onChange={() => handleSinglePricingModeChange('total')}
+                              />
+                              Totale soggiorno
+                            </label>
+                          </div>
+                        </div>
+
+                        {formData.singlePricingMode === 'perNight' && (
+                          <div>
+                            <label style={{ fontSize: '0.85rem', fontWeight: '500', display: 'block', marginBottom: '0.35rem' }}>
+                              Prezzo per notte
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={formData.singlePricePerNight}
+                              onChange={(e) => setFormData(prev => ({ ...prev, singlePricePerNight: e.target.value }))}
+                              placeholder="€/notte"
+                              style={{ width: '100%' }}
+                            />
+                          </div>
+                        )}
+
+                        {formData.singlePricingMode === 'total' && (
+                          <div>
+                            <label style={{ fontSize: '0.85rem', fontWeight: '500', display: 'block', marginBottom: '0.35rem' }}>
+                              Totale soggiorno
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={formData.singleTotalPrice}
+                              onChange={(e) => setFormData(prev => ({ ...prev, singleTotalPrice: e.target.value }))}
+                              placeholder="Totale complessivo"
+                              style={{ width: '100%' }}
+                            />
+                          </div>
+                        )}
+
+                        <div style={{ borderTop: '1px solid rgba(226, 232, 240, 0.7)', paddingTop: '1rem', display: 'grid', gap: '0.75rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <input
+                              type="checkbox"
+                              checked={!!formData.extraPerRoom?.petAllowed}
+                              onChange={(e) => handleSingleExtraChange('petAllowed', e.target.checked)}
+                            />
+                            <span>Animali (+{formatCurrency(PET_EXTRA)})</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <input
+                              type="checkbox"
+                              checked={!!formData.roomCribs}
+                              onChange={(e) => handleSingleCribChange(e.target.checked)}
+                            />
+                            <span>Culla (+{formatCurrency(CRIB_EXTRA)})</span>
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '0.85rem', display: 'block', marginBottom: '0.25rem' }}>Extra Bar (€)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={formData.extraPerRoom?.extraBar ?? ''}
+                              onChange={(e) => handleSingleExtraChange('extraBar', e.target.value)}
+                              placeholder="0"
+                              style={{ width: '100%' }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '0.85rem', display: 'block', marginBottom: '0.25rem' }}>Extra Servizi (€)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={formData.extraPerRoom?.extraServizi ?? ''}
+                              onChange={(e) => handleSingleExtraChange('extraServizi', e.target.value)}
+                              placeholder="0"
+                              style={{ width: '100%' }}
+                            />
+                          </div>
+                        </div>
                       </div>
                     )}
+
+                    <div style={{ marginTop: '1.25rem' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Totali</span>
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '0.75rem',
+                        marginTop: '0.75rem',
+                      }}>
+                        <div style={{ padding: '0.75rem', background: '#fff', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(226, 232, 240, 0.8)' }}>
+                          <strong style={{ fontSize: '0.85rem', color: '#15294F' }}>Prezzo base</strong>
+                          <p style={{ margin: '0.35rem 0 0', fontSize: '1rem' }}>{formatCurrency(basePricePreview)}</p>
+                        </div>
+                        <div style={{ padding: '0.75rem', background: '#fff', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(226, 232, 240, 0.8)' }}>
+                          <strong style={{ fontSize: '0.85rem', color: '#15294F' }}>Extra</strong>
+                          <p style={{ margin: '0.35rem 0 0', fontSize: '1rem' }}>{formatCurrency(extrasTotalPreview)}</p>
+                        </div>
+                        <div style={{ padding: '0.75rem', background: '#fff', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(226, 232, 240, 0.8)' }}>
+                          <strong style={{ fontSize: '0.85rem', color: '#15294F' }}>Totale suggerito</strong>
+                          <p style={{ margin: '0.35rem 0 0', fontSize: '1rem', fontWeight: 600 }}>{formatCurrency(suggestedTotalPreview)}</p>
+                        </div>
+                        <div style={{ padding: '0.75rem', background: '#fff', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(226, 232, 240, 0.8)' }}>
+                          <strong style={{ fontSize: '0.85rem', color: '#15294F' }}>Prezzo finale (verrà salvato)</strong>
+                          <p style={{ margin: '0.35rem 0 0', fontSize: '1rem', fontWeight: 600, color: '#1f2937' }}>{formatCurrency(finalPricePreview)}</p>
+                        </div>
+                        <div style={{ padding: '0.75rem', background: '#fff', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(226, 232, 240, 0.8)' }}>
+                          <strong style={{ fontSize: '0.85rem', color: '#15294F' }}>Caparra</strong>
+                          <p style={{ margin: '0.35rem 0 0', fontSize: '1rem', fontWeight: 600, color: '#16a34a' }}>{formatCurrency(formData.deposit || 0)}</p>
+                        </div>
+                        <div style={{ padding: '0.75rem', background: '#fff', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(226, 232, 240, 0.8)' }}>
+                          <strong style={{ fontSize: '0.85rem', color: '#15294F' }}>Da pagare</strong>
+                          <p style={{ margin: '0.35rem 0 0', fontSize: '1.05rem', fontWeight: 700 }}>{formatCurrency(amountDuePreview)}</p>
+                          {extrasAppliedToDuePreview > 0 && (
+                            <small style={{ display: 'block', marginTop: '0.25rem', color: 'rgba(15,23,42,0.6)' }}>
+                              Extra sommati: {formatCurrency(extrasAppliedToDuePreview)}
+                            </small>
+                          )}
+                          {previewInterpretation && (
+                            <small style={{ display: 'block', marginTop: '0.25rem', color: 'rgba(15,23,42,0.6)' }}>
+                              {previewInterpretation}
+                            </small>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
                     <div style={{
                       display: 'grid',
                       gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
                       gap: '1rem',
-                      marginTop: '1rem'
+                      marginTop: '1.25rem',
                     }}>
                       <div>
                         <label style={{ fontSize: '0.85rem', fontWeight: '500', display: 'block', marginBottom: '0.35rem', color: '#7c3aed' }}>
-                          Prezzo Totale Personalizzato (override)
+                          Prezzo finale (opzionale)
                         </label>
                         <input
                           type="number"
-                          name="customPrice"
-                          value={formData.customPrice}
-                          onChange={handleInputChange}
                           min="0"
                           step="0.01"
-                          placeholder="Lascia vuoto per mantenere il prezzo salvato"
+                          value={formData.customPrice}
+                          onChange={handleInputChange}
+                          name="customPrice"
+                          placeholder="Lascia vuoto per usare il totale suggerito"
                           style={{ width: '100%' }}
                         />
                         <small style={{ fontSize: '0.75rem', color: 'rgba(15, 23, 42, 0.6)', display: 'block', marginTop: '0.3rem' }}>
-                          Inserisci un nuovo importo totale (sconto/prezzo fisso) oppure lascia vuoto.
+                          Inserisci uno sconto o un prezzo totale finale.
                         </small>
                       </div>
-
                       <div>
                         <label style={{ fontSize: '0.85rem', fontWeight: '500', display: 'block', marginBottom: '0.35rem' }}>
-                          Caparra (€)
+                          Caparra ricevuta
                         </label>
                         <input
                           type="number"
-                          name="deposit"
-                          value={formData.deposit}
-                          onChange={handleInputChange}
                           min="0"
                           step="0.01"
-                          placeholder="Es. 50"
+                          value={formData.deposit}
+                          onChange={handleInputChange}
+                          name="deposit"
+                          placeholder="€"
                           style={{ width: '100%' }}
                         />
                       </div>
                     </div>
 
-                    <div style={{
-                      marginTop: '1.25rem',
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                      gap: '0.75rem'
-                    }}>
-                      <div style={{ padding: '0.75rem', background: '#fff', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(226, 232, 240, 0.8)' }}>
-                        <strong style={{ fontSize: '0.85rem', color: '#15294F' }}>Prezzo Base</strong>
-                        <p style={{ margin: '0.35rem 0 0', fontSize: '1rem' }}>€ {editingSummary.base.toFixed(2)}</p>
-                      </div>
-                      <div style={{ padding: '0.75rem', background: '#fff', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(226, 232, 240, 0.8)' }}>
-                        <strong style={{ fontSize: '0.85rem', color: '#15294F' }}>Extras</strong>
-                        <p style={{ margin: '0.35rem 0 0', fontSize: '1rem' }}>€ {editingSummary.extrasTotal.toFixed(2)}</p>
-                      </div>
-                      <div style={{ padding: '0.75rem', background: '#fff', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(226, 232, 240, 0.8)' }}>
-                        <strong style={{ fontSize: '0.85rem', color: '#15294F' }}>Totale Calcolato</strong>
-                        <p style={{ margin: '0.35rem 0 0', fontSize: '1rem', fontWeight: 600 }}>€ {editingSummary.calculatedTotal.toFixed(2)}</p>
-                      </div>
-                      <div style={{ padding: '0.75rem', background: '#fff', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(226, 232, 240, 0.8)' }}>
-                        <strong style={{ fontSize: '0.85rem', color: '#15294F' }}>Prezzo Finale che verrà salvato</strong>
-                        <p style={{ margin: '0.35rem 0 0', fontSize: '1rem', fontWeight: 600, color: '#1f2937' }}>€ {finalPricePreview.toFixed(2)}</p>
-                      </div>
-                      <div style={{ padding: '0.75rem', background: '#fff', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(226, 232, 240, 0.8)' }}>
-                        <strong style={{ fontSize: '0.85rem', color: '#15294F' }}>Caparra</strong>
-                        <p style={{ margin: '0.35rem 0 0', fontSize: '1rem', fontWeight: 600, color: '#16a34a' }}>€ {N(formData.deposit).toFixed(2)}</p>
-                      </div>
-                      <div style={{ padding: '0.75rem', background: '#fff', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(226, 232, 240, 0.8)' }}>
-                        <strong style={{ fontSize: '0.85rem', color: '#15294F' }}>Da incassare</strong>
-                        <p style={{ margin: '0.35rem 0 0', fontSize: '1.05rem', fontWeight: 700 }}>€ {amountDuePreview.toFixed(2)}</p>
-                      </div>
-                    </div>
-
-                    {Math.abs(finalPricePreview - editingSummary.calculatedTotal) > 0.01 && (
-                      <div style={{ marginTop: '0.75rem', padding: '0.75rem', borderRadius: 'var(--radius-sm)', background: 'rgba(124, 58, 237, 0.08)', border: '1px solid rgba(124, 58, 237, 0.25)', color: '#5b21b6', fontSize: '0.85rem', display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
-                        <span>Diff. rispetto al totale calcolato: € {(finalPricePreview - editingSummary.calculatedTotal).toFixed(2)}</span>
+                    {hasPreviewDifference && (
+                      <div style={{ marginTop: '1rem', padding: '0.75rem', borderRadius: 'var(--radius-sm)', background: 'rgba(124, 58, 237, 0.08)', border: '1px solid rgba(124, 58, 237, 0.25)', color: '#5b21b6', fontSize: '0.85rem', display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
+                        <span>Prezzo finale salvato – Totale suggerito: {formatCurrency(previewDifference)}</span>
                         <button
                           type="button"
                           className="btn btn-sm"
-                          onClick={() => setFormData(prev => ({ ...prev, customPrice: '', price: editingSummary.calculatedTotal.toFixed(2) }))}
+                          onClick={() => setFormData(prev => ({ ...prev, customPrice: '', price: suggestedTotalPreview }))}
                         >
-                          Usa Totale Calcolato
+                          Allinea prezzo finale al totale suggerito
                         </button>
                       </div>
                     )}

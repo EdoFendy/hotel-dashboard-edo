@@ -1,6 +1,9 @@
 // src/utils/pricing.js
 // Centralized pricing logic used across Calendar, Lists and Quick View.
 
+export const PET_EXTRA = 10;
+export const CRIB_EXTRA = 10;
+
 // Helper: safe number
 export const N = (v) => {
   if (v === null || v === undefined || v === '') return 0;
@@ -39,35 +42,49 @@ export function computeExtras(reservation) {
   const isGroup = !!reservation?.isGroup;
   const perRoom = {};
   let extrasTotal = 0;
+  let aggregated = {
+    extraBar: 0,
+    extraServizi: 0,
+    pet: 0,
+    crib: 0,
+  };
 
   if (isGroup && Array.isArray(reservation?.roomNumbers)) {
     reservation.roomNumbers.forEach((room) => {
       const e = (reservation.extraPerRoom && reservation.extraPerRoom[room]) || {};
       const bar = N(e.extraBar);
       const serv = N(e.extraServizi);
-      const pet = e.petAllowed ? 10 : 0;
-      const crib = reservation.roomCribs && reservation.roomCribs[room] ? 10 : 0;
+      const pet = e.petAllowed ? PET_EXTRA : 0;
+      const crib = reservation.roomCribs && reservation.roomCribs[room] ? CRIB_EXTRA : 0;
       const sum = bar + serv + pet + crib;
       perRoom[room] = { extraBar: bar, extraServizi: serv, petAllowed: !!e.petAllowed, crib: !!(reservation.roomCribs && reservation.roomCribs[room]), total: sum };
       extrasTotal += sum;
+      aggregated.extraBar += bar;
+      aggregated.extraServizi += serv;
+      aggregated.pet += pet;
+      aggregated.crib += crib;
     });
   } else {
     const e = reservation?.extraPerRoom || {};
     const bar = N(e.extraBar);
     const serv = N(e.extraServizi);
-    const pet = e.petAllowed ? 10 : 0;
+    const pet = e.petAllowed ? PET_EXTRA : 0;
     const hasCrib = typeof reservation?.roomCribs === 'boolean'
       ? reservation.roomCribs
       : reservation?.roomCribs && typeof reservation.roomCribs === 'object'
         ? Object.values(reservation.roomCribs).some(Boolean)
         : false;
-    const crib = hasCrib ? 10 : 0;
+    const crib = hasCrib ? CRIB_EXTRA : 0;
     const sum = bar + serv + pet + crib;
     perRoom['single'] = { extraBar: bar, extraServizi: serv, petAllowed: !!e.petAllowed, crib: hasCrib, total: sum };
     extrasTotal += sum;
+    aggregated.extraBar += bar;
+    aggregated.extraServizi += serv;
+    aggregated.pet += pet;
+    aggregated.crib += crib;
   }
 
-  return { perRoom, extrasTotal };
+  return { perRoom, extrasTotal, aggregated };
 }
 
 // Compute base price using roomPrices*nights for groups or priceWithoutExtras otherwise
@@ -84,26 +101,125 @@ export function computeBase(reservation) {
 }
 
 // Summarize pricing, deciding whether saved price likely includes extras
+function formatCurrency(value) {
+  return N(value).toLocaleString('it-IT', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+  });
+}
+
+function resolvePricingMode(reservation, base, nights) {
+  const isGroup = !!reservation?.isGroup;
+  const pricingMode = reservation?.pricingMode
+    || (!isGroup && reservation?.singlePricing?.mode)
+    || (isGroup && reservation?.groupPricing?.mode)
+    || (isGroup ? 'perNightPerRoom' : 'perNight');
+
+  if (!isGroup) {
+    const mode = pricingMode === 'total' ? 'total' : 'perNight';
+    const perNightValue = reservation?.singlePricing?.pricePerNight
+      ?? (nights > 0 ? base / nights : 0);
+    const totalForStay = reservation?.singlePricing?.totalForStay ?? base;
+
+    return {
+      mode,
+      label: mode === 'perNight' ? 'Prezzo per notte' : 'Totale soggiorno',
+      baseBreakdown: mode === 'perNight' && nights > 0
+        ? `${nights} notti × ${formatCurrency(perNightValue)} = ${formatCurrency(base)}`
+        : null,
+      perNightValue,
+      totalForStay,
+    };
+  }
+
+  const groupMode = pricingMode || 'perNightPerRoom';
+  const perRoomRates = reservation?.groupPricing?.perRoomRates || reservation?.roomPrices || {};
+  const uniformPerNight = reservation?.groupPricing?.uniformPerNight ?? null;
+  const totalForStay = reservation?.groupPricing?.totalForStay ?? base;
+
+  let label = 'Prezzo per notte per camera';
+  let breakdown = null;
+
+  if (groupMode === 'perNightUniform') {
+    label = 'Prezzo per notte (stesso per tutte le camere)';
+    const rate = uniformPerNight ?? (nights > 0 && reservation?.roomNumbers?.length
+      ? base / (nights * reservation.roomNumbers.length)
+      : 0);
+    breakdown = nights > 0 && reservation?.roomNumbers?.length
+      ? `${nights} notti × ${reservation.roomNumbers.length} camere × ${formatCurrency(rate)} = ${formatCurrency(base)}`
+      : null;
+  } else if (groupMode === 'totalForStay') {
+    label = 'Totale soggiorno';
+    breakdown = `${formatCurrency(totalForStay)}`;
+  } else {
+    const parts = Array.isArray(reservation?.roomNumbers)
+      ? reservation.roomNumbers.map((room) => {
+          const rate = perRoomRates?.[room] ?? (nights > 0 ? base / nights / reservation.roomNumbers.length : 0);
+          return `Camera ${room}: ${formatCurrency(rate)}`;
+        })
+      : [];
+    breakdown = nights > 0 && parts.length > 0
+      ? `${nights} notti × (${parts.join(', ')})`
+      : null;
+  }
+
+  return {
+    mode: groupMode,
+    label,
+    baseBreakdown: breakdown,
+    perRoomRates,
+    uniformPerNight,
+    totalForStay,
+  };
+}
+
 export function summarizeReservationPricing(reservation) {
-  const { extrasTotal, perRoom } = computeExtras(reservation);
+  const { extrasTotal, perRoom, aggregated } = computeExtras(reservation);
   const { base, nights } = computeBase(reservation);
   const savedPrice = N(reservation?.price);
   const deposit = N(reservation?.deposit);
   const priceWithExtras = N(reservation?.priceWithExtras);
+  const finalPriceOverride = reservation?.finalPriceOverride !== undefined && reservation?.finalPriceOverride !== null
+    ? N(reservation.finalPriceOverride)
+    : null;
 
-  // Preferred calculated total
-  const calculatedTotal = priceWithExtras > 0 ? priceWithExtras : base + extrasTotal;
+  const basePlusExtras = base + extrasTotal;
 
-  // Heuristic to decide if saved price already includes extras
+  // Preferred calculated total per dati tecnici
+  const calculatedTotal = priceWithExtras > 0 ? priceWithExtras : basePlusExtras;
+
   const eps = 0.01;
-  const includesExtras = (
-    (priceWithExtras > 0 && Math.abs(savedPrice - priceWithExtras) < eps) ||
-    Math.abs(savedPrice - (base + extrasTotal)) < eps ||
-    (savedPrice > 0 && extrasTotal === 0) // degenerate but reasonable
-  );
+  const finalPriceCandidate = finalPriceOverride !== null
+    ? finalPriceOverride
+    : (savedPrice > 0 ? savedPrice : calculatedTotal);
 
-  const dueUsingSaved = Math.max(0, savedPrice - deposit);
-  const dueUsingCalculated = Math.max(0, calculatedTotal - deposit);
+  const finalPriceIncludesExtras = Math.abs(finalPriceCandidate - basePlusExtras) < eps;
+  const finalPriceMatchesBase = Math.abs(finalPriceCandidate - base) < eps;
+
+  let extrasAppliedToDue = 0;
+  if (!finalPriceIncludesExtras && extrasTotal > 0) {
+    extrasAppliedToDue = extrasTotal;
+  }
+
+  const amountDueBasis = finalPriceCandidate + extrasAppliedToDue;
+  const amountDue = Math.max(0, amountDueBasis - deposit);
+
+  const modeInfo = resolvePricingMode(reservation, base, nights);
+
+  const extrasItems = [];
+  if (aggregated.extraBar > 0) {
+    extrasItems.push({ key: 'extraBar', label: 'Extra bar', amount: aggregated.extraBar });
+  }
+  if (aggregated.extraServizi > 0) {
+    extrasItems.push({ key: 'extraServizi', label: 'Extra servizi', amount: aggregated.extraServizi });
+  }
+  if (aggregated.pet > 0) {
+    extrasItems.push({ key: 'pet', label: 'Animali', amount: aggregated.pet });
+  }
+  if (aggregated.crib > 0) {
+    extrasItems.push({ key: 'crib', label: 'Culla', amount: aggregated.crib });
+  }
 
   return {
     nights,
@@ -113,9 +229,17 @@ export function summarizeReservationPricing(reservation) {
     calculatedTotal,
     savedPrice,
     deposit,
-    includesExtras,
-    dueUsingSaved,
-    dueUsingCalculated,
+    amountDue,
+    finalPrice: finalPriceCandidate,
+    finalPriceOverride,
+    finalPriceIncludesExtras,
+    finalPriceMatchesBase,
+    extrasAppliedToDue,
+    amountDueBasis,
+    pricingMode: modeInfo.mode,
+    pricingLabel: modeInfo.label,
+    baseBreakdown: modeInfo.baseBreakdown,
+    extrasItems,
   };
 }
 
