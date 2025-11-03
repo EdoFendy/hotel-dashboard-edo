@@ -460,7 +460,7 @@ function CalendarPage() {
                 }
                 className={styles.navButton}
               >
-                ← Mese Precedente
+                ← Precedente
               </button>
               <span className={styles.currentMonth}>
                 {currentMonth.toLocaleString('it-IT', {
@@ -476,7 +476,7 @@ function CalendarPage() {
                 }
                 className={styles.navButton}
               >
-                Mese Successivo →
+                Successivo →
               </button>
             </div>
           </div>
