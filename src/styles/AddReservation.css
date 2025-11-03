@@ -7,6 +7,7 @@
   box-shadow: var(--shadow-card, 0 12px 40px -28px rgba(15, 23, 42, 0.4));
   border: 1px solid rgba(148, 163, 184, 0.18);
   color: #1f2937;
+  width: 100%;
 }
 
 .reservation-wizard--drawer {
@@ -109,18 +110,14 @@
 
 .wizard-section {
   display: grid;
+  gap: 1.5rem;
 }
 
 .wizard-grid {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
-}
-
-@media (min-width: 960px) {
-  .wizard-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    align-items: stretch;
-  }
+  align-items: stretch;
 }
 
 .wizard-card {
@@ -131,6 +128,7 @@
   box-shadow: 0 10px 30px -24px rgba(15, 23, 42, 0.4);
   display: grid;
   gap: 0.85rem;
+  width: 100%;
 }
 
 .reservation-wizard--drawer .wizard-card {
