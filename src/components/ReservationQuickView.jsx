@@ -1803,15 +1803,3 @@ function ReservationQuickView({ reservationId, isOpen, onClose, onUpdate}) {
 }
 
 export default ReservationQuickView;
-                {!reservation.isGroup && reservation.extraPerRoom && (
-                  <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(226, 232, 240, 0.8)', paddingTop: '1rem' }}>
-                    <strong style={{ fontSize: '0.9rem', color: 'rgba(15, 23, 42, 0.75)' }}>Extras Applicati:</strong>
-                    <div style={{ fontSize: '0.85rem', marginTop: '0.5rem', display: 'grid', gap: '0.3rem' }}>
-                      <span>🍹 Extra Bar: € {pricing ? (pricing.perRoom.single?.extraBar || 0).toFixed(2) : N(reservation.extraPerRoom.extraBar).toFixed(2)}</span>
-                      <span>🛎️ Extra Servizi: € {pricing ? (pricing.perRoom.single?.extraServizi || 0).toFixed(2) : N(reservation.extraPerRoom.extraServizi).toFixed(2)}</span>
-                      <span>🐾 Pet: {pricing ? (pricing.perRoom.single?.petAllowed ? 'Sì (+10€)' : 'No') : reservation.extraPerRoom.petAllowed ? 'Sì (+10€)' : 'No'}</span>
-                      <span>👶 Culla: {pricing ? (pricing.perRoom.single?.crib ? 'Sì (+10€)' : 'No') : (typeof reservation.roomCribs === 'boolean' ? reservation.roomCribs : false) ? 'Sì (+10€)' : 'No'}</span>
-                      <span style={{ fontWeight: 600 }}>Totale Extras: € {pricing ? pricing.extrasTotal.toFixed(2) : '0.00'}</span>
-                    </div>
-                  </div>
-                )}
